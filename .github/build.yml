@@ -1,0 +1,41 @@
+name: Build FCLTouchFilter
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: windows-2022
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install NuGet
+      uses: NuGet/setup-nuget@v2
+
+    - name: Restore packages
+      run: nuget restore FCLTouchFilter.sln
+
+    - name: Build
+      run: |
+        msbuild FCLTouchFilter.sln ^
+        /p:Configuration=Release ^
+        /p:Platform=x64
+
+    - name: Upload driver
+      uses: actions/upload-artifact@v4
+      with:
+        name: FCLTouchFilter
+        path: |
+          **/*.sys
+          **/*.inf
+          **/*.pdb
