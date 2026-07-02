@@ -1,0 +1,55 @@
+name: Build FCLTouchFilter
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build driver
+        shell: cmd
+        run: |
+          msbuild FCLTouchFilter.sln /p:Configuration=Release /p:Platform=x64 /m
+
+      - name: Create test certificate
+        shell: powershell
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=FCLTouchFilter Test Certificate" -CertStoreLocation Cert:\CurrentUser\My
+          $pwd = ConvertTo-SecureString -String "fcltouch" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath FCLTouchFilterTestCert.pfx -Password $pwd
+          Export-Certificate -Cert $cert -FilePath FCLTouchFilterTestCert.cer
+
+      - name: Sign catalog if present
+        shell: powershell
+        run: |
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object { $_.FullName -match "x64" } | Select-Object -First 1
+          if ($signtool) {
+            $cat = Get-ChildItem -Recurse -Filter *.cat | Select-Object -First 1
+            if ($cat) { & $signtool.FullName sign /fd SHA256 /f FCLTouchFilterTestCert.pfx /p fcltouch $cat.FullName }
+          }
+
+      - name: Prepare artifact
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Get-ChildItem -Recurse -Include FCLTouchFilter.sys,FCLTouchFilter.inf,FCLTouchFilter.cat,FCLTouchFilter.pdb | Copy-Item -Destination out -Force
+          Copy-Item FCLTouchFilterTestCert.cer out -Force
+          Copy-Item tools\install.cmd out -Force
+          Copy-Item tools\uninstall.cmd out -Force
+
+      - name: Upload driver
+        uses: actions/upload-artifact@v4
+        with:
+          name: FCLTouchFilter-driver
+          path: out/*

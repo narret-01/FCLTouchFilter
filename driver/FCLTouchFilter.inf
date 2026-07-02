@@ -1,0 +1,64 @@
+;
+; FCLTouchFilter.inf
+; KMDF HID upper filter for Fujitsu/FCL USB Touch Panel VID_0430&PID_0508
+;
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=HIDClass
+ClassGuid={745A17A0-74D3-11D0-B6FE-00A0C90F57DA}
+Provider=%ManufacturerName%
+CatalogFile=FCLTouchFilter.cat
+DriverVer=07/02/2026,0.1.0.0
+PnpLockdown=1
+
+[DestinationDirs]
+DefaultDestDir = 12
+FCLTouchFilter_CopyFiles = 12
+
+[SourceDisksNames]
+1 = %DiskName%,,,
+
+[SourceDisksFiles]
+FCLTouchFilter.sys = 1,,
+
+[Manufacturer]
+%ManufacturerName%=Standard,NTamd64
+
+[Standard.NTamd64]
+%FCLTouch.DeviceDesc%=FCLTouch_Install, USB\VID_0430&PID_0508
+
+[FCLTouch_Install.NT]
+CopyFiles=FCLTouchFilter_CopyFiles
+
+[FCLTouchFilter_CopyFiles]
+FCLTouchFilter.sys
+
+[FCLTouch_Install.NT.HW]
+AddReg=FCLTouch_UpperFilter_AddReg
+
+[FCLTouch_UpperFilter_AddReg]
+; REG_MULTI_SZ + append. Adds this filter above the HID function driver for this device only.
+HKR,,UpperFilters,0x00010008,"FCLTouchFilter"
+
+[FCLTouch_Install.NT.Services]
+AddService=FCLTouchFilter,,FCLTouchFilter_Service_Inst
+
+[FCLTouchFilter_Service_Inst]
+DisplayName    = %ServiceDesc%
+ServiceType    = 1
+StartType      = 3
+ErrorControl   = 1
+ServiceBinary  = %12%\FCLTouchFilter.sys
+
+[FCLTouch_Install.NT.Wdf]
+KmdfService = FCLTouchFilter, FCLTouchFilter_WdfSect
+
+[FCLTouchFilter_WdfSect]
+KmdfLibraryVersion = 1.15
+
+[Strings]
+ManufacturerName="narret-01"
+DiskName="FCLTouchFilter Installation Disk"
+FCLTouch.DeviceDesc="Fujitsu/FCL USB Touch Panel HID Filter"
+ServiceDesc="FCLTouchFilter KMDF HID Upper Filter"
